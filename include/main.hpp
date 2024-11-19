@@ -2,7 +2,9 @@
 
 #ifdef TEENSYDUINO
 #include <Arduino.h>
+#endif
 
+#include "adc.hpp"
 #include "board_defs.hpp"
 #include "can.hpp"
-#endif
+#include "led.hpp"
