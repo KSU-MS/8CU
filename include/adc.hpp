@@ -2,6 +2,7 @@
 
 #ifdef TEENSYDUINO
 #include "board_defs.hpp"
+#include <Arduino.h>
 #include <SPI.h>
 
 class adc {

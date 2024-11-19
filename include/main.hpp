@@ -4,7 +4,7 @@
 #include <Arduino.h>
 #endif
 
+#include "8CU.hpp"
 #include "adc.hpp"
-#include "board_defs.hpp"
 #include "can.hpp"
 #include "led.hpp"
