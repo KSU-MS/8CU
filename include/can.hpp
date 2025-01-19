@@ -4,28 +4,39 @@
 #ifdef TEENSYDUINO
 #include <FlexCAN_T4.h>
 
-FlexCAN_T4<CAN1, RX_SIZE_256, TX_SIZE_16> iso_can;
-FlexCAN_T4<CAN2, RX_SIZE_256, TX_SIZE_16> can;
-
 template <typename FlexCAN_T4> class canMan {
   FlexCAN_T4 *controller;
   CAN_message_t msg;
 
+public:
   void setup(uint32_t buad) {
     controller->begin();
-    controller->setbaudrate(buad);
+    controller->setBaudRate(buad);
   }
 
-  bool check_mail() {
+  uint16_t check_mail() {
     if (controller->read(msg)) {
-      return true;
+      return msg.id;
     } else {
-      return false;
+      return msg.id;
     }
   }
 
-  uint8_t *read_message() {}
+  uint8_t *read_message() {
+    uint8_t *out;
+    for (int i; i < msg.len; i++) {
+      out[i] = msg.buf[i];
+    }
 
-  void send_message(uint8_t *msg, uint16_t id, uint16_t length) {}
+    return out;
+  }
+
+  void send_message(uint8_t *out, uint16_t id, uint16_t length) {
+    memcpy(msg.buf, out, length);
+    msg.id = id;
+    msg.len = length;
+
+    controller->write(msg);
+  }
 };
 #endif

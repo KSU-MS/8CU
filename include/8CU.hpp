@@ -2,7 +2,9 @@
 
 //
 ////
-////// CONTROLLER PINS
+////// CONTROLLER THINGS
+
+// PINS
 #define CAN_CTX 0
 #define CAN_CRX 1
 #define NEOPIXEL_PIN 2
@@ -18,14 +20,20 @@
 #define ISO_CAN_CTX 22
 #define ISO_CAN_CRX 23
 
+// BAUD RATES
+#define SERIAL_BAUD 9600
+#define CAN_BAUD 500000
+#define ISO_CAN_BAUD 500000
 #define DEFAULT_SPI_SPEED 1000000
 
 //
 ////
 ////// BOARD THINGS
+
+// LEDS
 #define NUM_NEOPIXEL 4
 
-// ADC CHANNELS
+// ADC PINS
 #define ISENSE_12V 0
 #define SDC_ISENSE 1
 #define SENSE_12V 2
