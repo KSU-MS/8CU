@@ -1,10 +1,12 @@
+#pragma once
 #include "main.hpp"
 
 uint32_t startMillis;
 uint32_t widthHigh;
 uint32_t width;
 
-void interruptHandle() {
+#ifdef TEENSYDUINO
+void interrupt_handle() {
   int state = digitalReadFast(IMD_SENSE);
 
   if (state == HIGH) {
@@ -18,4 +20,5 @@ void interruptHandle() {
   }
 }
 
-void init_imd() { attachInterrupt(IMD_SENSE, interruptHandle, CHANGE); }
+void init_imd() { attachInterrupt(IMD_SENSE, interrupt_handle, CHANGE); }
+#endif

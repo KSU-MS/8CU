@@ -2,9 +2,13 @@
 
 #ifdef TEENSYDUINO
 #include <Arduino.h>
+#include <Metro.h>
+#include <SPI.h>
 #endif
 
-#include "8CU.hpp"
+#include "CAN_Defs.hpp"
+#include "CAN_Handle.hpp"
+#include "Pin_Defs.hpp"
 #include "adc.hpp"
-#include "can.hpp"
+#include "imd.hpp"
 #include "led.hpp"

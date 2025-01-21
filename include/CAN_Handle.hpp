@@ -1,5 +1,4 @@
 #pragma once
-#include "ksu_can.h"
 
 #ifdef TEENSYDUINO
 #include <FlexCAN_T4.h>
@@ -39,4 +38,8 @@ public:
     controller->write(msg);
   }
 };
+
+FlexCAN_T4<CAN1> MDB_CAN;
+FlexCAN_T4<CAN2> ACC_CAN;
+CAN_message_t msg;
 #endif

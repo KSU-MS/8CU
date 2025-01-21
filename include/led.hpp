@@ -1,5 +1,6 @@
 #pragma once
 
+#include "main.hpp"
 #include <Adafruit_NeoPixel.h>
 
 class debug {

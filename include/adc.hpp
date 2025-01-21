@@ -1,10 +1,7 @@
 #pragma once
+#include "main.hpp"
 
 #ifdef TEENSYDUINO
-#include "8CU.hpp"
-#include <Arduino.h>
-#include <SPI.h>
-
 enum adc_method {
   avr,
   mcp,
