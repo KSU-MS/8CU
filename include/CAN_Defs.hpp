@@ -19,3 +19,6 @@
 
 //
 //// 8CU IDs
+#define ID_ACU_READINGS 0x259
+#define ID_ACU_STATUS 0x25A
+#define ID_ACU_SHUTDOWN_DATA 0x25B

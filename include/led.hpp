@@ -1,6 +1,6 @@
 #pragma once
 
-#include "main.hpp"
+#ifdef ARDUINO
 #include <Adafruit_NeoPixel.h>
 
 class debug {
@@ -16,3 +16,4 @@ void debug::setup() {
 
   pixels->begin();
 }
+#endif

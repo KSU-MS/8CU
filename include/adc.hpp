@@ -1,7 +1,7 @@
 #pragma once
 #include "main.hpp"
 
-#ifdef TEENSYDUINO
+#ifdef ARDUINO
 enum adc_method {
   avr,
   mcp,

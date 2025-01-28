@@ -3,6 +3,8 @@
 //
 ////
 ////// CONTROLLER THINGS
+// VOLTAGE TO TEMP CONSTANT
+#define VOLTAGE_TO_TEMP 1
 
 // PINS
 #define CAN_CTX 0
