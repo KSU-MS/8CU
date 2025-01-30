@@ -131,12 +131,14 @@ void loop() {
     Serial.println();
 #endif
 
-    acu_readings.buf[0] = map(vSDC.value.in, 0, 65535, 0, 255);
-    acu_readings.buf[1] = map(iSDC.value.in, 0, 65535, 0, 255);
-    acu_readings.buf[2] = map(v12v.value.in, 0, 65535, 0, 255);
-    acu_readings.buf[3] = map(i12v.value.in, 0, 65535, 0, 255);
-    acu_readings.buf[4] = map(v5v.value.in, 0, 65535, 0, 255);
-    acu_readings.buf[5] = map(v3v.value.in, 0, 65535, 0, 255);
+    // This 4095 number comes from the ADCs 12bit readings, we convert to
+    // voltage at the DBC to save on message space
+    acu_readings.buf[0] = map(vSDC.value.in, 0, 4095, 0, 255);
+    acu_readings.buf[1] = map(iSDC.value.in, 0, 4095, 0, 255);
+    acu_readings.buf[2] = map(v12v.value.in, 0, 4095, 0, 255);
+    acu_readings.buf[3] = map(i12v.value.in, 0, 4095, 0, 255);
+    acu_readings.buf[4] = map(v5v.value.in, 0, 4095, 0, 255);
+    acu_readings.buf[5] = map(v3v.value.in, 0, 4095, 0, 255);
   }
 
   if (send_status_10s.check()) {
@@ -144,12 +146,17 @@ void loop() {
     temp.update();
     humidity.update();
 
-    // VDD=5.0V 22.9 mV/°C
-    uint8_t temp_value = uint8_t(temp.value.in * 0.213223253275);
+    // VDD=3.3V 15.1 mV/°C, MCP does 12bit reads, but value shouldn't read
+    // above 100 so cast to uint8_t and ball. So get our shit into volts
+    // 2^12 - 1 = 4095 -> 3.3/4095 = 0.000805860805861
+    // Get our volts into degrees
+    // 1/(15.1 * 10^-3) = 66.225
+    // Multiply the two and now we have a factor for uint16 -> degrees
+    uint8_t temp_value = uint8_t(temp.value.in * 0.0533682652888);
     set_temp(temp_value);
 
-    // VDD=5.0V 40.0 mV/%RH
-    uint8_t humidity_value = uint8_t(humidity.value.in * 0.1220703125);
+    // VDD=3.3V 26.4 mV/%RH, same logic as above
+    uint8_t humidity_value = uint8_t(humidity.value.in * 0.030525030525);
     set_humidity(humidity_value);
 
 #ifdef DEBUG
