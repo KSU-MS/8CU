@@ -6,6 +6,8 @@ adc bms_relay;
 adc imd_gpio;
 adc bms_gpio;
 
+tssi safety_lights;
+
 // Non-critical GPIO for rules
 adc vSDC;
 adc iSDC;
@@ -28,10 +30,10 @@ uint8_t highest_temp;
 uint8_t lowest_temp;
 uint8_t message_count = 0;
 
-bool imd_is_chillin;
-bool bms_is_chillin;
-bool imd_gpio_high;
-bool bms_gpio_high;
+bool imd_is_chillin = true;
+bool bms_is_chillin = true;
+bool imd_relay_state = false;
+bool bms_relay_state = false;
 
 void setup() {
   imd_relay.setup(avr, IMD_RELAY);
@@ -65,6 +67,8 @@ void setup() {
 }
 
 void loop() {
+  safety_lights.update_lights();
+
   if (send_data_2hz.check()) {
     //
     //// SDC updates
@@ -72,6 +76,8 @@ void loop() {
     bms_relay.update();
     imd_gpio.update();
     bms_gpio.update();
+
+    safety_lights.update_status(imd_is_chillin, bms_is_chillin);
 
 #ifdef DEBUG
     Serial.printf("IMD Relay: %d\t", imd_relay.value.in);
@@ -84,29 +90,29 @@ void loop() {
 #endif
 
     if (imd_relay.value.in < 50)
+      imd_relay_state = true;
+    else
+      imd_relay_state = false;
+
+    if (bms_relay.value.in < 50)
+      bms_relay_state = true;
+    else
+      bms_relay_state = false;
+
+    if (imd_gpio.value.in > 500)
       imd_is_chillin = true;
     else
       imd_is_chillin = false;
 
-    if (bms_relay.value.in < 50)
+    if (bms_gpio.value.in > 500)
       bms_is_chillin = true;
     else
       bms_is_chillin = false;
 
-    if (imd_gpio.value.in > 500)
-      imd_gpio_high = true;
-    else
-      imd_gpio_high = false;
-
-    if (bms_gpio.value.in > 500)
-      bms_gpio_high = true;
-    else
-      bms_gpio_high = false;
-
-    acu_shutdown.buf[0] = imd_is_chillin;
-    acu_shutdown.buf[1] = bms_is_chillin;
-    acu_shutdown.buf[2] = imd_gpio_high;
-    acu_shutdown.buf[3] = bms_gpio_high;
+    acu_shutdown.buf[0] = imd_relay_state;
+    acu_shutdown.buf[1] = bms_relay_state;
+    acu_shutdown.buf[2] = imd_is_chillin;
+    acu_shutdown.buf[3] = bms_is_chillin;
     acu_shutdown.buf[4] = get_imd_hz();
     acu_shutdown.buf[5] = get_imd_duty();
 

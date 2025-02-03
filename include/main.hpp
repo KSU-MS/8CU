@@ -15,3 +15,4 @@
 #include "git.hpp"
 #include "imd.hpp"
 #include "led.hpp"
+#include "tssi.hpp"
