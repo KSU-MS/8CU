@@ -183,8 +183,8 @@ void loop() {
   if (mdb_has_message()) {
     can_message inbound_msg = read_mdb_can();
 
-    if (inbound_msg.id == MODULE_1_A || MODULE_2_A || MODULE_3_A ||
-        MODULE_4_A || MODULE_5_A) {
+    if (inbound_msg.id == ID_MODULE_1_A || ID_MODULE_2_A || ID_MODULE_3_A ||
+        ID_MODULE_4_A || ID_MODULE_5_A) {
       for (int i = 0; i < inbound_msg.len; i++) {
         if ((inbound_msg.buf[i] > highest_temp) || message_count > 5) {
           highest_temp = inbound_msg.buf[i] * VOLTAGE_TO_TEMP;
@@ -204,8 +204,8 @@ void loop() {
 #endif
 
       write_acc_can(inbound_msg);
-    } else if (inbound_msg.id == MODULE_1_B || MODULE_2_B || MODULE_3_B ||
-               MODULE_4_B || MODULE_5_B) {
+    } else if (inbound_msg.id == ID_MODULE_1_B || ID_MODULE_2_B ||
+               ID_MODULE_3_B || ID_MODULE_4_B || ID_MODULE_5_B) {
       write_acc_can(inbound_msg);
     } else {
       Serial.print("Got unexpected CAN message on MDB bus with ID: ");

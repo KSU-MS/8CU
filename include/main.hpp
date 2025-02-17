@@ -8,7 +8,8 @@
 #include <SPI.h>
 #endif
 
-#include "CAN_Defs.hpp"
+#include <KSUCAN.hpp>
+
 #include "CAN_Handle.hpp"
 #include "Pin_Defs.hpp"
 #include "adc.hpp"
