@@ -1,4 +1,5 @@
 #pragma once
+#include "Pin_Defs.hpp"
 
 #ifdef ARDUINO
 #include <Adafruit_NeoPixel.h>

@@ -1,11 +1,13 @@
 #pragma once
-#include "main.hpp"
+#include <stdint.h>
 
 uint32_t startMicros;
 uint32_t widthHigh;
 uint32_t width;
 
 #ifdef TEENSYDUINO
+#include <Arduino.h>
+
 void interrupt_handle() {
   int state = digitalReadFast(IMD_SENSE);
 

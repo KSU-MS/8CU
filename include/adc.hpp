@@ -1,11 +1,14 @@
 #pragma once
-#include "main.hpp"
+#include <stdint.h>
+
+// We want to catch when there isn't a ADC_CS pin defined globally
+#ifndef ADC_CS
+uint8_t ADC_CS = 10; // Typical default SPI CS pin
+#endif
 
 #ifdef ARDUINO
-enum adc_method {
-  avr,
-  mcp,
-};
+#include <Arduino.h>
+#include <SPI.h>
 
 // Helper functions for the pointer
 uint16_t avr_helper(uint8_t pin) { return (uint16_t)analogRead(pin); }
@@ -38,6 +41,26 @@ uint16_t mcp_helper(uint8_t pin) {
   return (result1 << 4) | (result2 >> 4);
 }
 
+void init_mcp() {
+  pinMode(ADC_CS, OUTPUT);
+  digitalWrite(ADC_CS, HIGH);
+
+  SPI.begin();
+}
+
+void init_mcp(uint8_t cs_pin) {
+  pinMode(cs_pin, OUTPUT);
+  digitalWrite(cs_pin, HIGH);
+
+  SPI.begin();
+}
+#endif
+
+enum adc_method {
+  avr,
+  mcp,
+};
+
 class adc {
 private:
   uint8_t pin;
@@ -61,12 +84,26 @@ public:
       break;
 
     case mcp:
-      pinMode(ADC_CS, OUTPUT);
-      pinMode(ADC_CS, HIGH);
+      init_mcp();
+      reader = &mcp_helper;
+      break;
+    }
+  }
 
-      // Initialize SPI:
-      SPI.begin();
+  // Added an overload for when the MCP is on another CS pin
+  void setup(adc_method guy, uint8_t cs_pin, uint8_t target_pin) {
+    pin = target_pin;
+#ifndef ADC_CS
+    ADC_CS = cs_pin;
+#endif
 
+    switch (guy) {
+    case avr:
+      reader = &avr_helper;
+      break;
+
+    case mcp:
+      init_mcp();
       reader = &mcp_helper;
       break;
     }
@@ -82,4 +119,3 @@ public:
     }
   }
 };
-#endif
