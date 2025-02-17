@@ -8,12 +8,12 @@
 #include <SPI.h>
 #endif
 
-#include <KSUCAN.hpp>
-
 #include "CAN_Handle.hpp"
 #include "Pin_Defs.hpp"
-#include "adc.hpp"
 #include "git.hpp"
 #include "imd.hpp"
 #include "led.hpp"
 #include "tssi.hpp"
+
+#include <KSUCAN.hpp>
+#include <adc.hpp>
