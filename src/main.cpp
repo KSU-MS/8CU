@@ -1,75 +1,25 @@
 #include "main.hpp"
-
-// Critical GPIO for SDC
-adc imd_relay;
-adc bms_relay;
-adc imd_gpio;
-adc bms_gpio;
-
-tssi safety_lights;
-
-// Non-critical GPIO for rules
-adc vSDC;
-adc iSDC;
-adc v12v;
-adc i12v;
-adc v5v;
-adc v3v;
-adc temp;
-adc humidity;
-
-debug pixels;
-
-Metro send_status_10s = Metro(10000);
-Metro send_data_2hz = Metro(500);
-can_message acu_status;
-can_message acu_shutdown;
-can_message acu_readings;
-
-uint8_t highest_temp;
-uint8_t lowest_temp;
-uint8_t message_count = 0;
-
-bool imd_is_chillin = true;
-bool bms_is_chillin = true;
-bool imd_relay_state = false;
-bool bms_relay_state = false;
+#include "can_handle.hpp"
+#include "car.h"
+#include "core_pins.h"
 
 void setup() {
-  imd_relay.setup(avr, IMD_RELAY);
-  bms_relay.setup(avr, BMS_RELAY);
-  imd_gpio.setup(avr, IMD_GPIO);
-  bms_gpio.setup(avr, BMS_GPIO);
+  digitalWrite(LED_BUILTIN, HIGH);
 
-  vSDC.setup(mcp, SDC_SENSE);
-  iSDC.setup(mcp, SDC_ISENSE);
-  v12v.setup(mcp, SENSE_12V);
-  i12v.setup(mcp, ISENSE_12V);
-  v5v.setup(mcp, SENSE_5V);
-  v3v.setup(mcp, SENSE_3V);
-  temp.setup(mcp, TEMP);
-  humidity.setup(mcp, HUMIDITY);
-
-  pixels.setup();
+  // pixels.setup();
 
   init_imd();
 
-  init_can();
-
-  acu_status.id = ID_ACU_STATUS;
-  acu_status.len = sizeof(board_status);
-
-  acu_shutdown.id = ID_ACU_SHUTDOWN_DATA;
-  acu_shutdown.len = 6;
-
-  acu_readings.id = ID_ACU_READINGS;
-  acu_readings.len = 6;
+  digitalWrite(SSI_GREEN, LOW);
+  digitalWrite(SSI_RED, LOW);
 }
 
 void loop() {
-  safety_lights.update_lights();
+  digitalToggle(LED_BUILTIN); // Flip for SOL
 
-  if (send_data_2hz.check()) {
+  // safety_lights.update_lights();
+
+  if (send_shutdown_2hz.check()) {
     //
     //// SDC updates
     imd_relay.update();
@@ -77,16 +27,16 @@ void loop() {
     imd_gpio.update();
     bms_gpio.update();
 
-    safety_lights.update_status(imd_is_chillin, bms_is_chillin);
+    int imd_hz = get_imd_hz();
+    int imd_duty = get_imd_duty();
 
 #ifdef DEBUG
-    Serial.printf("IMD Relay: %d\t", imd_relay.value.in);
-    Serial.printf("BMS Relay: %d\t", bms_relay.value.in);
-    Serial.printf("IMD gpio: %d\t", imd_gpio.value.in);
-    Serial.printf("BMS gpio: %d\t", bms_gpio.value.in);
-    Serial.printf("IMD Freq: %d\t", get_imd_hz());
-    Serial.printf("IMD duty cycle: ", get_imd_duty());
-    Serial.println();
+    Serial.printf("IMD Relay: %hu\t", imd_relay.value.in);
+    Serial.printf("BMS Relay: %hu\t", bms_relay.value.in);
+    Serial.printf("IMD gpio: %hu\t", imd_gpio.value.in);
+    Serial.printf("BMS gpio: %hu\t", bms_gpio.value.in);
+    Serial.printf("IMD Freq: %hu\t", imd_hz);
+    Serial.printf("IMD duty cycle: %hu\r\n", imd_duty);
 #endif
 
     if (imd_relay.value.in < 50)
@@ -109,48 +59,22 @@ void loop() {
     else
       bms_is_chillin = false;
 
-    acu_shutdown.buf[0] = imd_relay_state;
-    acu_shutdown.buf[1] = bms_relay_state;
-    acu_shutdown.buf[2] = imd_is_chillin;
-    acu_shutdown.buf[3] = bms_is_chillin;
-    acu_shutdown.buf[4] = get_imd_hz();
-    acu_shutdown.buf[5] = get_imd_duty();
+    // safety_lights.update_status(imd_is_chillin, bms_is_chillin);
 
-    write_acc_can(acu_shutdown);
+    can_message tmp;
+    tmp.id = 0x258;
+    tmp.length = 6;
+    tmp.buf.val = 0xFFFFFFFFFFFFFFFF;
 
-    //
-    //// Gizmo updates
-    vSDC.update();
-    iSDC.update();
-    v12v.update();
-    i12v.update();
-    v5v.update();
-    v3v.update();
-
-#ifdef DEBUG
-    Serial.printf("SDC Voltage: %d", vSDC.value.in);
-    Serial.printf("SDC Current: %d\t", iSDC.value.in);
-    Serial.printf("12v Voltage: %d\t", v12v.value.in);
-    Serial.printf("12v Current: %d\t", i12v.value.in);
-    Serial.printf("5v  Voltage: %d\t", v5v.value.in);
-    Serial.printf("3v3 Voltage: %d\t", v3v.value.in);
-    Serial.println();
-#endif
-
-    // This 4095 number comes from the ADCs 12bit readings, we convert to
-    // voltage at the DBC to save on message space
-    acu_readings.buf[0] = map(vSDC.value.in, 0, 4095, 0, 255);
-    acu_readings.buf[1] = map(iSDC.value.in, 0, 4095, 0, 255);
-    acu_readings.buf[2] = map(v12v.value.in, 0, 4095, 0, 255);
-    acu_readings.buf[3] = map(i12v.value.in, 0, 4095, 0, 255);
-    acu_readings.buf[4] = map(v5v.value.in, 0, 4095, 0, 255);
-    acu_readings.buf[5] = map(v3v.value.in, 0, 4095, 0, 255);
+    acc_can.send_controller_message(
+        pack_shutdown_message(imd_relay_state, bms_relay_state, imd_is_chillin,
+                              bms_is_chillin, imd_hz, imd_duty));
   }
 
   if (send_status_10s.check()) {
-    set_time();
-    temp.update();
-    humidity.update();
+    uint16_t time = millis() / 1000;
+    // temp.update();
+    // humidity.update();
 
     // VDD=3.3V 15.1 mV/°C, MCP does 12bit reads, but value shouldn't read
     // above 100 so cast to uint8_t and ball. So get our shit into volts
@@ -158,58 +82,87 @@ void loop() {
     // Get our volts into degrees
     // 1/(15.1 * 10^-3) = 66.225
     // Multiply the two and now we have a factor for uint16 -> degrees
-    uint8_t temp_value = uint8_t(temp.value.in * 0.0533682652888);
-    set_temp(temp_value);
+    // uint8_t temp_value = uint8_t(temp.value.in * 0.0533682652888);
+    uint8_t temp_value = 0;
 
     // VDD=3.3V 26.4 mV/%RH, same logic as above
-    uint8_t humidity_value = uint8_t(humidity.value.in * 0.030525030525);
-    set_humidity(humidity_value);
+    // uint8_t humidity_value = uint8_t(humidity.value.in * 0.030525030525);
+    uint8_t humid_value = 0;
 
 #ifdef DEBUG
-    Serial.printf("On time: %d\t", (millis() / 1000));
-    Serial.printf("Temp: %d\t", temp.value.in);
-    Serial.printf("Humidity: %d", humidity.value.in);
-    Serial.println();
+    Serial.printf("On time: %d\t", time);
+    Serial.printf("Temp: %d\t", temp_value);
+    Serial.printf("Humidity: %d\r\n", humid_value);
 #endif
 
-    write_acc_can(acu_status);
+    acc_can.send_controller_message(
+        pack_status_message(time, temp_value, humid_value));
+
+    //
+    //// Gizmo updates
+    // vSDC.update();
+    // iSDC.update();
+    // v12v.update();
+    // i12v.update();
+    // v5v.update();
+    // v3v.update();
+
+    // #ifdef DEBUG
+    //     Serial.printf("SDC Voltage: %d", vSDC.value.in);
+    //     Serial.printf("SDC Current: %d\t", iSDC.value.in);
+    //     Serial.printf("12v Voltage: %d\t", v12v.value.in);
+    //     Serial.printf("12v Current: %d\t", i12v.value.in);
+    //     Serial.printf("5v  Voltage: %d\t", v5v.value.in);
+    //     Serial.printf("3v3 Voltage: %d\t", v3v.value.in);
+    //     Serial.println();
+    // #endif
+
+    // This 4095 number comes from the ADCs 12bit readings, we convert to
+    // voltage at the DBC to save on message space
+    // acu_readings.buf[0] = map(vSDC.value.in, 0, 4095, 0, 255);
+    // acu_readings.buf[1] = map(iSDC.value.in, 0, 4095, 0, 255);
+    // acu_readings.buf[2] = map(v12v.value.in, 0, 4095, 0, 255);
+    // acu_readings.buf[3] = map(i12v.value.in, 0, 4095, 0, 255);
+    // acu_readings.buf[4] = map(v5v.value.in, 0, 4095, 0, 255);
+    // acu_readings.buf[5] = map(v3v.value.in, 0, 4095, 0, 255);
   }
 
   // Scrape out the highest and lowest voltage readings, convert them to
   // tempatures here for the highest and lowest temp message for the orion
-  // BMS, get new temps after 5 messages so that its a rolling number and not
+  // BMS, get new temps after 5 messages (we only have 5 MDBs, so we can assume
+  // after 5 messages everyone has talked) so that its a rolling number and not
   // just the peak high and low, then foward all the other messages we are
   // expecting, filter the rest for figuring out what is where it shouldn't be
-  if (mdb_has_message()) {
-    can_message inbound_msg = read_mdb_can();
+  if (1 == 0) {
+    // can_message inbound_msg = read_mdb_can();
 
-    if (inbound_msg.id == ID_MODULE_1_A || ID_MODULE_2_A || ID_MODULE_3_A ||
-        ID_MODULE_4_A || ID_MODULE_5_A) {
-      for (int i = 0; i < inbound_msg.len; i++) {
-        if ((inbound_msg.buf[i] > highest_temp) || message_count > 5) {
-          highest_temp = inbound_msg.buf[i] * VOLTAGE_TO_TEMP;
-          message_count++;
-        } else if (inbound_msg.buf[i] < lowest_temp || message_count > 5) {
-          lowest_temp = inbound_msg.buf[i] * VOLTAGE_TO_TEMP;
-          message_count++;
-        } else {
-          message_count = 0;
-        }
-      }
+    // if (inbound_msg.id == ID_MODULE_1_A || ID_MODULE_2_A || ID_MODULE_3_A ||
+    //     ID_MODULE_4_A || ID_MODULE_5_A) {
+    //   for (int i = 0; i < inbound_msg.len; i++) {
+    //     if ((inbound_msg.buf[i] > highest_temp) || message_count > 5) {
+    //       highest_temp = inbound_msg.buf[i] * VOLTAGE_TO_TEMP;
+    //       message_count++;
+    //     } else if (inbound_msg.buf[i] < lowest_temp || message_count > 5) {
+    //       lowest_temp = inbound_msg.buf[i] * VOLTAGE_TO_TEMP;
+    //       message_count++;
+    //     } else {
+    //       message_count = 0;
+    //     }
+    //   }
 
 #ifdef DEBUG
-      Serial.printf("Highest Temp: %d", highest_temp);
-      Serial.printf("\tLowest Temp: %d", lowest_temp);
-      Serial.println();
+    // Serial.printf("Highest Temp: %d", highest_temp);
+    // Serial.printf("\tLowest Temp: %d", lowest_temp);
+    // Serial.println();
 #endif
 
-      write_acc_can(inbound_msg);
-    } else if (inbound_msg.id == ID_MODULE_1_B || ID_MODULE_2_B ||
-               ID_MODULE_3_B || ID_MODULE_4_B || ID_MODULE_5_B) {
-      write_acc_can(inbound_msg);
-    } else {
-      Serial.print("Got unexpected CAN message on MDB bus with ID: ");
-      Serial.println(inbound_msg.id);
-    }
+    //     write_acc_can(inbound_msg);
+    //   } else if (inbound_msg.id == ID_MODULE_1_B || ID_MODULE_2_B ||
+    //              ID_MODULE_3_B || ID_MODULE_4_B || ID_MODULE_5_B) {
+    //     write_acc_can(inbound_msg);
+    //   } else {
+    //     Serial.print("Got unexpected CAN message on MDB bus with ID: ");
+    //     Serial.println(inbound_msg.id);
+    //   }
   }
 }

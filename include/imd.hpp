@@ -1,9 +1,9 @@
 #pragma once
 #include <stdint.h>
 
-uint32_t startMicros;
-uint32_t widthHigh;
-uint32_t width;
+uint32_t startMicros = 1;
+uint32_t widthHigh = 1;
+uint32_t width = 1;
 
 #ifdef TEENSYDUINO
 #include <Arduino.h>
@@ -11,7 +11,7 @@ uint32_t width;
 void interrupt_handle() {
   int state = digitalReadFast(IMD_SENSE);
 
-  if (state == HIGH) {
+  if (state == 1) {
     // End of last pulse, total width of high and low
     width = micros() - startMicros;
 

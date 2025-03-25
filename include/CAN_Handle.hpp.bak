@@ -1,11 +1,11 @@
 #pragma once
 
-#include <cstdint>
+#include <stdint.h>
 
 struct can_message {
   uint16_t id;
-  uint8_t *buf;
   uint8_t len;
+  uint8_t buf[8];
 };
 
 #ifdef TEENSYDUINO
@@ -50,8 +50,8 @@ can_message read_mdb_can() {
   can_message out;
 
   out.id = mdb_msg.id;
-  out.buf = mdb_msg.buf;
   out.len = mdb_msg.len;
+  memcpy(out.buf, mdb_msg.buf, mdb_msg.len);
 
   return out;
 }
