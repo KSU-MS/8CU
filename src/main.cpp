@@ -1,7 +1,4 @@
 #include "main.hpp"
-#include "can_handle.hpp"
-#include "car.h"
-#include "core_pins.h"
 
 void setup() {
   digitalWrite(LED_BUILTIN, HIGH);
@@ -10,6 +7,7 @@ void setup() {
 
   init_imd();
 
+  // BUG: The board cannot switch these high properly, go bodge this shit
   digitalWrite(SSI_GREEN, LOW);
   digitalWrite(SSI_RED, LOW);
 }
@@ -61,11 +59,6 @@ void loop() {
 
     // safety_lights.update_status(imd_is_chillin, bms_is_chillin);
 
-    can_message tmp;
-    tmp.id = 0x258;
-    tmp.length = 6;
-    tmp.buf.val = 0xFFFFFFFFFFFFFFFF;
-
     acc_can.send_controller_message(
         pack_shutdown_message(imd_relay_state, bms_relay_state, imd_is_chillin,
                               bms_is_chillin, imd_hz, imd_duty));
@@ -97,6 +90,9 @@ void loop() {
 
     acc_can.send_controller_message(
         pack_status_message(time, temp_value, humid_value));
+
+    // BUG: For some reason, enabling the MCP ADC reads will cause a crash,
+    // these are optional for now tho so thats a later problem
 
     //
     //// Gizmo updates
@@ -133,36 +129,37 @@ void loop() {
   // after 5 messages everyone has talked) so that its a rolling number and not
   // just the peak high and low, then foward all the other messages we are
   // expecting, filter the rest for figuring out what is where it shouldn't be
-  if (1 == 0) {
-    // can_message inbound_msg = read_mdb_can();
+  if (mdb_can.check_controller_message()) {
+    can_message inbound_msg = mdb_can.get_controller_message();
 
-    // if (inbound_msg.id == ID_MODULE_1_A || ID_MODULE_2_A || ID_MODULE_3_A ||
-    //     ID_MODULE_4_A || ID_MODULE_5_A) {
-    //   for (int i = 0; i < inbound_msg.len; i++) {
-    //     if ((inbound_msg.buf[i] > highest_temp) || message_count > 5) {
-    //       highest_temp = inbound_msg.buf[i] * VOLTAGE_TO_TEMP;
-    //       message_count++;
-    //     } else if (inbound_msg.buf[i] < lowest_temp || message_count > 5) {
-    //       lowest_temp = inbound_msg.buf[i] * VOLTAGE_TO_TEMP;
-    //       message_count++;
-    //     } else {
-    //       message_count = 0;
-    //     }
-    //   }
+    if (inbound_msg.id == CAN_ID_MODULE1_TEMPS || CAN_ID_MODULE2_TEMPS ||
+        CAN_ID_MODULE3_TEMPS || CAN_ID_MODULE4_TEMPS || CAN_ID_MODULE5_TEMPS) {
+      for (int i = 0; i < inbound_msg.length; i++) {
+        if ((inbound_msg.buf.byte[i] > highest_temp) || message_count > 5) {
+          highest_temp = inbound_msg.buf.byte[i] * VOLTAGE_TO_TEMP;
+          message_count++;
+        } else if (inbound_msg.buf.byte[i] < lowest_temp || message_count > 5) {
+          lowest_temp = inbound_msg.buf.byte[i] * VOLTAGE_TO_TEMP;
+          message_count++;
+        } else {
+          message_count = 0;
+        }
+      }
 
 #ifdef DEBUG
-    // Serial.printf("Highest Temp: %d", highest_temp);
-    // Serial.printf("\tLowest Temp: %d", lowest_temp);
-    // Serial.println();
+      Serial.printf("Highest Temp: %d", highest_temp);
+      Serial.printf("\tLowest Temp: %d", lowest_temp);
+      Serial.println();
 #endif
 
-    //     write_acc_can(inbound_msg);
-    //   } else if (inbound_msg.id == ID_MODULE_1_B || ID_MODULE_2_B ||
-    //              ID_MODULE_3_B || ID_MODULE_4_B || ID_MODULE_5_B) {
-    //     write_acc_can(inbound_msg);
-    //   } else {
-    //     Serial.print("Got unexpected CAN message on MDB bus with ID: ");
-    //     Serial.println(inbound_msg.id);
-    //   }
+      acc_can.send_controller_message(inbound_msg);
+    } else if (inbound_msg.id == CAN_ID_MODULE1_STATUS ||
+               CAN_ID_MODULE2_STATUS || CAN_ID_MODULE3_STATUS ||
+               CAN_ID_MODULE4_STATUS || CAN_ID_MODULE5_STATUS) {
+      acc_can.send_controller_message(inbound_msg);
+    } else {
+      Serial.print("Got unexpected CAN message on MDB bus with ID: ");
+      Serial.println(inbound_msg.id);
+    }
   }
 }

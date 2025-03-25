@@ -1,8 +1,8 @@
 #pragma once // Make sure the file is only included once
 #define DEBUG
 
-#include <KSUCAN.hpp>
 #include <adc.hpp>
+#include <can_tools.hpp>
 
 #ifdef ARDUINO
 #include <Arduino.h>
@@ -13,8 +13,6 @@
 // These have to get refed before the ksu-fw-common guys for proper define order
 #include "Pin_Defs.hpp"
 #include "can_handle.hpp"
-#include "can_tools.hpp"
-// #include "git.hpp"
 #include "imd.hpp"
 // #include "led.hpp"
 #include "tssi.hpp"
