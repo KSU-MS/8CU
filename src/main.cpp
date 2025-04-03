@@ -1,21 +1,27 @@
 #include "main.hpp"
+#include "core_pins.h"
 
 void setup() {
   digitalWrite(LED_BUILTIN, HIGH);
 
+  pinMode(SSI_RED, OUTPUT);
+  pinMode(SSI_GREEN, OUTPUT);
+
+  safety_lights.update_status(true, true, false, false);
+  safety_lights.update_lights();
+
   // pixels.setup();
 
-  init_imd();
+  // Uhh, the IMD just kinda takes a sec to give a signal, so we have to wait
+  delay(2000);
 
-  // BUG: The board cannot switch these high properly, go bodge this shit
-  digitalWrite(SSI_GREEN, LOW);
-  digitalWrite(SSI_RED, LOW);
+  init_imd();
 }
 
 void loop() {
   digitalToggle(LED_BUILTIN); // Flip for SOL
 
-  // safety_lights.update_lights();
+  safety_lights.update_lights();
 
   if (send_shutdown_2hz.check()) {
     //
@@ -29,12 +35,12 @@ void loop() {
     int imd_duty = get_imd_duty();
 
 #ifdef DEBUG
-    Serial.printf("IMD Relay: %hu\t", imd_relay.value.in);
-    Serial.printf("BMS Relay: %hu\t", bms_relay.value.in);
-    Serial.printf("IMD gpio: %hu\t", imd_gpio.value.in);
-    Serial.printf("BMS gpio: %hu\t", bms_gpio.value.in);
-    Serial.printf("IMD Freq: %hu\t", imd_hz);
-    Serial.printf("IMD duty cycle: %hu\r\n", imd_duty);
+    Serial.printf("IMD Relay: %i\t", imd_relay.value.in);
+    Serial.printf("BMS Relay: %i\t", bms_relay.value.in);
+    Serial.printf("IMD gpio: %i\t", imd_gpio.value.in);
+    Serial.printf("BMS gpio: %i\t", bms_gpio.value.in);
+    Serial.printf("IMD Freq: %i\t", imd_hz);
+    Serial.printf("IMD duty cycle: %i\r\n", imd_duty);
 #endif
 
     if (imd_relay.value.in < 50)
@@ -57,7 +63,8 @@ void loop() {
     else
       bms_is_chillin = false;
 
-    // safety_lights.update_status(imd_is_chillin, bms_is_chillin);
+    safety_lights.update_status(imd_is_chillin, bms_is_chillin, imd_relay_state,
+                                bms_relay_state);
 
     acc_can.send_controller_message(
         pack_shutdown_message(imd_relay_state, bms_relay_state, imd_is_chillin,
@@ -91,27 +98,24 @@ void loop() {
     acc_can.send_controller_message(
         pack_status_message(time, temp_value, humid_value));
 
-    // BUG: For some reason, enabling the MCP ADC reads will cause a crash,
-    // these are optional for now tho so thats a later problem
-
     //
     //// Gizmo updates
-    // vSDC.update();
-    // iSDC.update();
-    // v12v.update();
-    // i12v.update();
-    // v5v.update();
-    // v3v.update();
+    vSDC.update();
+    iSDC.update();
+    v12v.update();
+    i12v.update();
+    v5v.update();
+    v3v.update();
 
-    // #ifdef DEBUG
-    //     Serial.printf("SDC Voltage: %d", vSDC.value.in);
-    //     Serial.printf("SDC Current: %d\t", iSDC.value.in);
-    //     Serial.printf("12v Voltage: %d\t", v12v.value.in);
-    //     Serial.printf("12v Current: %d\t", i12v.value.in);
-    //     Serial.printf("5v  Voltage: %d\t", v5v.value.in);
-    //     Serial.printf("3v3 Voltage: %d\t", v3v.value.in);
-    //     Serial.println();
-    // #endif
+#ifdef DEBUG
+    Serial.printf("SDC Voltage: %d", vSDC.value.in);
+    Serial.printf("SDC Current: %d\t", iSDC.value.in);
+    Serial.printf("12v Voltage: %d\t", v12v.value.in);
+    Serial.printf("12v Current: %d\t", i12v.value.in);
+    Serial.printf("5v  Voltage: %d\t", v5v.value.in);
+    Serial.printf("3v3 Voltage: %d\t", v3v.value.in);
+    Serial.println();
+#endif
 
     // This 4095 number comes from the ADCs 12bit readings, we convert to
     // voltage at the DBC to save on message space

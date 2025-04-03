@@ -1,7 +1,6 @@
 #pragma once
 
 #include "can_tools.hpp"
-// #include "car.c"
 #include "car.h"
 
 can_obj_car_h_t kms_can;

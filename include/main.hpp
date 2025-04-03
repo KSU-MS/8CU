@@ -26,17 +26,17 @@ adc bms_gpio(avr, BMS_GPIO);
 canMan mdb_can(TEENSY_CAN1, MDB_CAN_BAUD_RATE);
 canMan acc_can(TEENSY_CAN2, ACCUMULATOR_CAN_BAUD_RATE);
 
-// tssi safety_lights;
+tssi safety_lights;
 
 // Non-critical GPIO for rules
-// adc vSDC(mcp, SDC_SENSE);
-// adc iSDC(mcp, SDC_ISENSE);
-// adc v12v(mcp, SENSE_12V);
-// adc i12v(mcp, ISENSE_12V);
-// adc v5v(mcp, SENSE_5V);
-// adc v3v(mcp, SENSE_3V);
-// adc temp(mcp, TEMP);
-// adc humidity(mcp, HUMIDITY);
+adc vSDC(mcp, SDC_SENSE);
+adc iSDC(mcp, SDC_ISENSE);
+adc v12v(mcp, SENSE_12V);
+adc i12v(mcp, ISENSE_12V);
+adc v5v(mcp, SENSE_5V);
+adc v3v(mcp, SENSE_3V);
+adc temp(mcp, TEMP);
+adc humidity(mcp, HUMIDITY);
 
 // debug pixels;
 
